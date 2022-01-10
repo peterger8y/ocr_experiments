@@ -2,12 +2,9 @@ import cv2
 import os
 import random
 import numpy as np
-import numpy as np
-import torch
 import skimage
 import cv2
 import itertools
-from skimage import transform as stf
 from PIL import Image
 from math import floor, ceil
 import random
