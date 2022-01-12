@@ -58,7 +58,7 @@ def concatenator_p2():
                 with open(tar_dir + str(alpha) + '.txt', 'x') as filed:
                     filed.write(text)
             i += 1
-            i = i % 4
+            i = i % 5
             cv2.imshow('image', im_curr)
             cv2.waitKey(0)
 
