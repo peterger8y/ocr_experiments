@@ -100,6 +100,7 @@ def train_gc_loader():
             else:
                 with open('iam_data/alt_train.gc', 'a') as fi:
                     fi.write(path + '\n')
+            i+=1
 
 
 
