@@ -131,3 +131,4 @@ dmypy.json
 iam_data/
 nets/
 crop_cloud_data_gen/
+origami_ocr/dataset/
