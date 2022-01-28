@@ -11,3 +11,9 @@ If it doesnt find one, It'll throw an error.
 
 Having the image file location handy gives you string output of that file. excluding it
 gives you metrics about how well the model is transcribing data. 
+
+=======================================================================================
+DATA AUGMENTATION:
+
+check out data generation augmentation for the algorithm that creates novel data using 
+pre_sliced images for bounding box placement.
