@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 iam_data/
-nets/
 crop_cloud_data_gen/
-origami_ocr/dataset/
+bounding_boxes/dataset/
+bounding_boxes/bb_model/
+bounding_boxes/bb_outputs/

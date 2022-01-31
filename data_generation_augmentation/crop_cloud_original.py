@@ -11,7 +11,7 @@ import zipfile
 import numpy as np
 import pandas as pd
 import cv2
-
+import noise
 
 # resize so the longest side is max_length
 def load_image(filename, max_length=None):
@@ -179,19 +179,27 @@ def get_crop_cloud(canvas_width=1024):
     user_words = get_user_words()
     num_words = random.randint(0, 150)
     words_to_use = user_words[:num_words]
-    snippets = load_snippets(words_to_use)
-    canvas = np.zeros((731, 1024, 3), np.uint8)
-    canvas.fill(255)
-    print(words_to_use)
-    snippets = scale_clip(snippets, canvas)
 
+    snippets = load_snippets(words_to_use)
+    int1 = random.randint(150, 240)
+    int2 = random.randint(int1+1, 255)
+    canvas = np.random.randint(int1, int2, (2000, 1500, 3), np.uint8)
+    snippets = scale_clip(snippets, canvas)
     page = make_page(canvas, snippets, words_to_use)
 
+    func_direct = {1: noise.noisy, 2: noise.lineup, 3: noise.uniform_lineup, 4: noise.slant}
+    choices = [x for x in func_direct.keys()]
+    num_choices = random.randint(0, len(choices))
+    dist_selec = random.sample(choices, num_choices)
+    for ind in dist_selec:
+        page = np.uint8(func_direct[ind](page))
+    if random.choice([True, False]):
+        page = noise.margin(page)
     return page
 
 
 if __name__ == "__main__":
-    for i in range(10):
+    while True:
         alpha = get_crop_cloud()
         cv2.imshow('image', alpha)
         cv2.waitKey(0)
