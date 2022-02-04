@@ -62,6 +62,25 @@ def scale_clip(boxes, canvas):
     return scaled_clips
 
 
+def scale_clip2(boxes, canvas, words):
+    scaled_clips = []
+    for i, box in enumerate(boxes):
+        length = len(words[i])
+        box_area = (box.shape[0] * box.shape[1])
+        standard = ((length * .1) + 1) / 800 * (canvas.shape[0] * canvas.shape[1])
+        ratio = np.sqrt(standard / box_area)
+        second = int(ratio * box.shape[0])
+        first = int(ratio * box.shape[1])
+        size = (first, second)
+        if ratio < 1:
+            resize_algo = cv2.INTER_AREA  # recommended for shrinking
+        else:
+            resize_algo = cv2.INTER_CUBIC  # recommended for enlarging
+        image = cv2.resize(box, dsize=size, interpolation=resize_algo)
+        scaled_clips.append(image)
+    return scaled_clips
+
+
 # Collate all the requested pages into one words table, including the file path, date, and cropped words
 def get_user_words():
     queue = []
@@ -179,14 +198,14 @@ def get_crop_cloud(canvas_width=1024):
     user_words = get_user_words()
     num_words = random.randint(0, 150)
     words_to_use = user_words[:num_words]
-
     snippets = load_snippets(words_to_use)
     int1 = random.randint(150, 240)
     int2 = random.randint(int1+1, 255)
     canvas = np.random.randint(int1, int2, (2000, 1500, 3), np.uint8)
-    snippets = scale_clip(snippets, canvas)
-    page = make_page(canvas, snippets, words_to_use)
-
+    snippets = scale_clip2(snippets, canvas, user_words)
+    #snippets = scale_clip(snippets, canvas)
+    #page = make_page(canvas, snippets, words_to_use)
+    page, text, bbs = write_lines_to_page(canvas, snippets, words_to_use)
     func_direct = {1: noise.noisy, 2: noise.lineup, 3: noise.uniform_lineup, 4: noise.slant}
     choices = [x for x in func_direct.keys()]
     num_choices = random.randint(0, len(choices))
@@ -195,12 +214,75 @@ def get_crop_cloud(canvas_width=1024):
         page = np.uint8(func_direct[ind](page))
     if random.choice([True, False]):
         page = noise.margin(page)
-    return page
+    return page, text, bbs
+
+def write_lines_to_page(canvas, snippets, words_to_use):
+
+    height = canvas.shape[0]
+    width = canvas.shape[1]
+    spacing = height//random.randint(1, 45)
+    start = spacing
+    i = 0
+    occupied = np.zeros(shape=(canvas.shape[:2]), dtype=bool)
+    full_string = ''
+    bbs = []
+    while start < height and i < len(snippets):
+        failed_attempts = 0
+        num_of_words_try = random.randint(0, 20)
+        j = 0
+        y1 = start
+        filled = 0
+        while j < num_of_words_try and i+j < len(snippets):
+            image = snippets[j+i]
+            word = words_to_use[j+i].split('_')[0]
+            sec = min(filled+random.randint(0, 50), width)
+            if filled > sec:
+                break
+            x1 = random.randint(filled, sec)
+            x2 = x1+image.shape[1]
+            y2 = y1 + image.shape[0]
+            R, G, B = cv2.split(image)  # split the image into channels
+            mask = 255 - make_monochrome(image)
+            color = cv2.merge((B, G, R))
+            mask = np.atleast_3d(mask) / 255
+            mask_bool = mask.reshape(mask.shape[:2]).astype('bool')
+            mask_bool = np.ones((image.shape[0], image.shape[1])).astype(bool)
+            try:
+                intersection = np.logical_and(mask_bool, occupied[y1:y2, x1:x2])
+            except:
+                break
+
+            if intersection.sum() > 0:
+                # reject this placement
+                failed_attempts += 1
+                if failed_attempts > 5:
+                    break
+                continue
+            else:
+                # place the word
+                try:
+                    canvas[y1:y2, x1:x2] = (mask * color + (1 - mask) * canvas[y1:y2, x1:x2])
+                    occupied[y1:y2, x1:x2] = np.logical_or(mask_bool, occupied[y1:y2, x1:x2])
+                    j += 1
+                    filled = x2 + 10
+                    full_string += ' ' + word
+                    bbs.append([x1, y1, x2, y1, x2, y2, x1, y2, word])
+                except:
+                    failed_attempts+=1
+                    if failed_attempts > 5:
+                        break
+                    continue
+        i+=j
+        start += spacing
+
+    return canvas, full_string, bbs
+
 
 
 if __name__ == "__main__":
     while True:
-        alpha = get_crop_cloud()
+        alpha, text, bbs = get_crop_cloud()
+        print(text, bbs)
         cv2.imshow('image', alpha)
         cv2.waitKey(0)
 
