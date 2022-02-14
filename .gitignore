@@ -133,3 +133,4 @@ crop_cloud_data_gen/
 bounding_boxes/dataset/
 bounding_boxes/bb_model/
 bounding_boxes/bb_outputs/
+subset_data/
