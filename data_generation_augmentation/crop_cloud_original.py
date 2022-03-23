@@ -13,6 +13,7 @@ import pandas as pd
 import cv2
 import noise
 
+
 # resize so the longest side is max_length
 def load_image(filename, max_length=None):
     image = cv2.imread(filename)
@@ -65,9 +66,9 @@ def scale_clip(boxes, canvas):
 def scale_clip2(boxes, canvas, words):
     scaled_clips = []
     for i, box in enumerate(boxes):
-        length = len(words[i])
+        length = len(words[i].split('_')[0])
         box_area = (box.shape[0] * box.shape[1])
-        standard = ((length * .1) + 1) / 800 * (canvas.shape[0] * canvas.shape[1])
+        standard = ((length * .2) + .5) / 800 * (canvas.shape[0] * canvas.shape[1]) * random.uniform(.8, 1.2)
         ratio = np.sqrt(standard / box_area)
         second = int(ratio * box.shape[0])
         first = int(ratio * box.shape[1])
@@ -196,94 +197,118 @@ def get_crop_cloud(canvas_width=1024):
     """
 
     user_words = get_user_words()
-    num_words = random.randint(0, 150)
+    num_words = random.randint(0, 250)
     words_to_use = user_words[:num_words]
     snippets = load_snippets(words_to_use)
-    int1 = random.randint(150, 240)
-    int2 = random.randint(int1+1, 255)
-    canvas = np.random.randint(int1, int2, (2000, 1500, 3), np.uint8)
+    int1 = random.randint(240, 255)
+    int2 = random.randint(int1, 255)
+    canvas = np.random.randint(int1, int2 + 1, (1080, 800, 1), np.uint8)
+    page, spacing, cap, left_end = noise.pageup(canvas)
+    page = np.expand_dims(page, -1)
     snippets = scale_clip2(snippets, canvas, user_words)
-    #snippets = scale_clip(snippets, canvas)
-    #page = make_page(canvas, snippets, words_to_use)
-    page, text, bbs = write_lines_to_page(canvas, snippets, words_to_use)
-    func_direct = {1: noise.noisy, 2: noise.lineup, 3: noise.uniform_lineup, 4: noise.slant}
-    choices = [x for x in func_direct.keys()]
-    num_choices = random.randint(0, len(choices))
-    dist_selec = random.sample(choices, num_choices)
-    for ind in dist_selec:
-        page = np.uint8(func_direct[ind](page))
-    if random.choice([True, False]):
-        page = noise.margin(page)
-    return page, text, bbs
+    # snippets = scale_clip(snippets, canvas)
+    # page = make_page(canvas, snippets, words_to_use, spacing, cap, left_end)
+    page, text = write_lines_to_page(page, snippets, words_to_use, spacing, left_end, cap)
+    page = noise.to_mean(page)
+    #page = noise.wavy(page)
+    # func_direct = {1: noise.noisy, 2: noise.lineup, 3: noise.uniform_lineup, 4: noise.slant}
+    # choices = [x for x in func_direct.keys()]
+    # num_choices = random.randint(0, len(choices))
+    # dist_selec = random.sample(choices, num_choices)
+    # for ind in dist_selec:
+    #     page = np.uint8(func_direct[ind](page))
+    # if random.choice([True, False]):
+    #     page = noise.margin(page)
+    page = (255 - ((255 - page) * random.uniform(.65, 1)))
 
-def write_lines_to_page(canvas, snippets, words_to_use):
+    return page, spacing, cap, left_end, text
 
-    height = canvas.shape[0]
-    width = canvas.shape[1]
-    spacing = height//random.randint(1, 45)
-    start = spacing
+
+def det_bot_word(word1):
+    image = cv2.adaptiveThreshold(
+        src=np.uint8(word1),
+        maxValue=255,
+        adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        thresholdType=cv2.THRESH_BINARY,
+        blockSize=21,
+        C=51)
+    image = (1 - (image / 255))
+    cumulative_vals = [np.sum(image[i, :]) for i in range(image.shape[0])]
+    total = 0
+    tally = 0
+    new_arr = []
+    mode = None
+    for i, x in enumerate(cumulative_vals):
+        total += x * i
+        tally += x
+        for j in range(int(x)):
+            new_arr.append(i)
+        if mode is None or x > mode:
+            mode = i
+    tar = int(total / tally)
+    std = int(1.1 * (np.std(new_arr)))
+    #std = int(std * random.uniform(.7, 1))
+    return tar+std
+
+
+
+def write_lines_to_page(canvas, snippets, words_to_use, spacing, left_end, cap):
+    num = 1
+    cur_line_x = left_end
+    stacked = random.choice([True, False])
+    text = ''
+
     i = 0
-    occupied = np.zeros(shape=(canvas.shape[:2]), dtype=bool)
-    full_string = ''
-    bbs = []
-    while start < height and i < len(snippets):
-        failed_attempts = 0
-        num_of_words_try = random.randint(0, 20)
-        j = 0
-        y1 = start
-        filled = 0
-        while j < num_of_words_try and i+j < len(snippets):
-            image = snippets[j+i]
-            word = words_to_use[j+i].split('_')[0]
-            sec = min(filled+random.randint(0, 50), width)
-            if filled > sec:
-                break
-            x1 = random.randint(filled, sec)
-            x2 = x1+image.shape[1]
-            y2 = y1 + image.shape[0]
-            R, G, B = cv2.split(image)  # split the image into channels
-            mask = 255 - make_monochrome(image)
-            color = cv2.merge((B, G, R))
-            mask = np.atleast_3d(mask) / 255
-            mask_bool = mask.reshape(mask.shape[:2]).astype('bool')
-            mask_bool = np.ones((image.shape[0], image.shape[1])).astype(bool)
-            try:
-                intersection = np.logical_and(mask_bool, occupied[y1:y2, x1:x2])
-            except:
-                break
-
-            if intersection.sum() > 0:
-                # reject this placement
-                failed_attempts += 1
-                if failed_attempts > 5:
-                    break
-                continue
+    breaker = True
+    page_adj = random.randint(0, 255)
+    while True:
+        if random.choice([True, False]):
+            num += 1
+        else:
+            cur_line_y = int(cap + (spacing * num))
+            break
+    while True:
+        if i >= len(snippets):
+            break
+        if cur_line_y >= canvas.shape[0]:
+            break
+        color = snippets[i]
+        color = np.expand_dims(make_monochrome(color), -1)
+        line_pos = det_bot_word(color)
+        mask = color / 255
+        if breaker:
+            breaker = False
+            space_pre = random.randint(0, 150)
+        else:
+            space_pre = random.randint(15, 75)
+        y1 = cur_line_y - line_pos
+        y2 = y1 + mask.shape[0]
+        x1 = cur_line_x + space_pre
+        x2 = x1 + mask.shape[1]
+        color = color + (page_adj + color) // 2
+        try:
+            canvas[y1:y2, x1:x2] = (color * (1 - mask) + (mask) * canvas[y1:y2, x1:x2])
+            cur_line_x += color.shape[1] + space_pre
+            text += ' ' + words_to_use[i].split('_')[0]
+            i += 1
+        except:
+            if not stacked:
+                num += random.randint(1, 3)
+                cur_line_y = cap + int(spacing * num)
             else:
-                # place the word
-                try:
-                    canvas[y1:y2, x1:x2] = (mask * color + (1 - mask) * canvas[y1:y2, x1:x2])
-                    occupied[y1:y2, x1:x2] = np.logical_or(mask_bool, occupied[y1:y2, x1:x2])
-                    j += 1
-                    filled = x2 + 10
-                    full_string += ' ' + word
-                    bbs.append([x1, y1, x2, y1, x2, y2, x1, y2, word])
-                except:
-                    failed_attempts+=1
-                    if failed_attempts > 5:
-                        break
-                    continue
-        i+=j
-        start += spacing
+                num += 1
+                cur_line_y = cap + int(num * spacing)
+            cur_line_x = left_end
+            breaker = True
+            pass
 
-    return canvas, full_string, bbs
-
+    return canvas, text
 
 
 if __name__ == "__main__":
     while True:
-        alpha, text, bbs = get_crop_cloud()
-        print(text, bbs)
-        cv2.imshow('image', alpha)
+        alpha, spacing, cap, left_end, text = get_crop_cloud()
+        cv2.imshow('image', np.uint8(alpha))
         cv2.waitKey(0)
 
     # for x in os.listdir('crop_cloud_data_gen/'):

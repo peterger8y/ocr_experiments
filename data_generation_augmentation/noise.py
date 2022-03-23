@@ -187,7 +187,7 @@ class Distort3():
 
 
 def aug_ED2(imgs, w, h, n_ch, tst=False):
-    d = Distort3(1.0, 10, 10, 5, 15, [w, h], 1, 1)
+    d = Distort3(1.0, 5, 5, 2, 5, [w, h], 1, 1)
 
     for i in range(len(imgs)):
         res = d.perform_operation(Image.fromarray(np.squeeze((imgs[i] * 255).astype(np.uint8))))
@@ -282,7 +282,59 @@ def uniform_lineup(im):
     return im
 
     
+def to_mean(image):
+
+  choice = False#random.choice([True, False])
+  avg = image.mean()
+  if not choice:
+    avg = avg - random.randint(45, 200)
+  for i in range(image.shape[0]):
+    for j in range(image.shape[1]):
+      val = (avg + image[i][j])//2 + random.randint(-10, 10)
+      image[i][j] = min(max(val, 0), 255)
+
+  return np.uint8(image)
 
 
+def pageup(im1):
+    im = im1.copy()
+    line_spacing = im.shape[0] // random.randint(18, 35)
+    vert_line_cap = im.shape[1] // 4
+    vert_line_start = im.shape[1] // 10
+    imprint = np.zeros(im.shape)
+    imprint.fill(255)
+    loc = line_spacing
+    choice = random.randint(vert_line_start, vert_line_cap)
+    to_conc = np.random.randint(240, 255, (im.shape[0], choice, 1), np.uint8)
+    left_end = choice
+    im = np.concatenate([to_conc, im], axis=1)
+    im[:, choice - random.randint(1, 2):choice].fill(random.randint(15, 40))
+    vert_choice = choice
+    while loc < im.shape[0]:
+        width = random.randint(1, 2)
+        im[loc - width:loc, :].fill(random.randint(15, 90))
+        loc += line_spacing
+    choice = im.shape[0] // random.randint(6, 8)
+    cap = choice
+    to_conc = np.random.randint(240, 255, (choice, im.shape[1], 1), np.uint8)
+    im = np.concatenate([to_conc, im], axis=0)
+    adjustment = 1080/im.shape[0]
+    line_spacing_adj = line_spacing * adjustment
+    im[choice - random.randint(1, 2):choice, :].fill(random.randint(15, 40))
+    if vert_choice != None:
+        im[:, vert_choice - random.randint(1, 2):vert_choice].fill(random.randint(0, 20))
+    image2 = cv2.resize(im, dsize=(800, 1080), interpolation=cv2.INTER_LINEAR)
+    adjusted_cap = int(1080/im.shape[0] * cap)
+    adjusted_left_end = int(800/im.shape[1] * left_end)
+    return image2, line_spacing_adj, adjusted_cap, adjusted_left_end
 
 
+def size_up(im1):
+    im = np.uint8(im1.copy())
+    pref_size_ratio = 800 / 1080
+    cur_ratio = im.shape[1] / im.shape[0]
+    x = pref_size_ratio / cur_ratio
+    amnt_conc = int(x * im.shape[0])
+    arr = np.random.randint(240, 255, (amnt_conc, im.shape[1], 1), np.uint8)
+    to_return = np.concatenate([im, arr], axis=0)
+    return to_return

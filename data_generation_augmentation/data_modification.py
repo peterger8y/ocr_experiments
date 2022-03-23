@@ -272,3 +272,50 @@ def slant_dim(img):
     img1 = slant(img, selec=1)
     img1 = slant(img1, selec=-1)
     return img1
+
+
+def line_up(image):
+    vert_lines = []
+    horiz_lines = []
+    if random.choice([True, False]):
+        vert_lines.append(random.randint(0, image.shape[1] // 5))
+    if random.choice([True, False]):
+        vert_lines.append(random.randint((image.shape[1] * 4) // 5, image.shape[1] - 1))
+    if random.choice([True, False]):
+        horiz_lines.append(random.randint(0, image.shape[0] // 5))
+    if random.choice([True, False]):
+        horiz_lines.append(random.randint((image.shape[0] * 4) // 5, image.shape[0] - 1))
+    choices = [0, 1, 2, 3, 4]
+    for x_cord in vert_lines:
+        for extra in range(random.choice(choices)):
+            alt_coord = x_cord - extra
+            if alt_coord < 0:
+                pass
+            else:
+                if random.choice([True, False]):
+                    input_arr = np.random.randint(0, 100, size=image.shape[0])
+                    image[:, alt_coord] = input_arr
+                else:
+                    image[:, alt_coord].fill(random.uniform(0, 125))
+    for y_cord in horiz_lines:
+        for i, extra in enumerate(range(random.randint(2, 4))):
+            alt_coord = y_cord - extra
+            if alt_coord < 0:
+                pass
+            else:
+                if random.choice([True, False]):
+                    input_arr = np.random.randint(0, 100, size=image.shape[1])
+                    image[alt_coord, :] = input_arr
+                else:
+                    image[alt_coord, :].fill(random.uniform(0, 125))
+
+    return np.uint8(image)
+
+
+if __name__ == '__main__':
+    for i in range(20):
+        arr = np.zeros((64, 192))
+        arr.fill(255)
+        im = line_up(arr)
+        cv2.imshow('image', np.uint8(im))
+        cv2.waitKey(0)

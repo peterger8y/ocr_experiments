@@ -150,7 +150,6 @@ def main(argv=None):
 
         with tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(allow_soft_placement=True)) as sess:
             ckpt_state = tf.compat.v1.train.get_checkpoint_state(FLAGS.checkpoint_path)
-
             model_path = os.path.join(FLAGS.checkpoint_path, os.path.basename(ckpt_state.model_checkpoint_path))
             print('Restore from {}'.format(model_path))
             saver.restore(sess, model_path)
@@ -203,24 +202,28 @@ def main(argv=None):
 
 if __name__ == '__main__':
 
-    def downloadDirectoryFroms3(bucket_name, remote_directory_name, local_dir):
-        s3_resource = boto3.resource('s3')
-        bucket = s3_resource.Bucket(bucket_name)
-        for obj in bucket.objects.filter(Prefix=remote_directory_name):
-            if not os.path.exists(os.path.dirname(obj.key)):
-                os.makedirs(os.path.dirname(obj.key))
-            bucket.download_file(obj.key, obj.key)
+    # def downloadDirectoryFroms3(bucket_name, remote_directory_name, local_dir):
+    #     s3_resource = boto3.resource('s3')
+    #     bucket = s3_resource.Bucket(bucket_name)
+    #     for obj in bucket.objects.filter(Prefix=remote_directory_name):
+    #         if not os.path.exists(os.path.dirname(obj.key)):
+    #             os.makedirs(os.path.dirname(obj.key))
+    #         bucket.download_file(obj.key, obj.key)
+    #
+    #
+    # if not os.path.exists('bb_model/'):
+    #     print('downloading model...')
+    #     BUCKET_NAME = os.getenv('BUCKET_NAME')
+    #     PATH = os.getenv('PATH_LOC_2')
+    #     DIR_LOC = os.getenv('DIR_LOC_2')
+    #
+    #     downloadDirectoryFroms3(BUCKET_NAME, PATH, DIR_LOC)
+    # else:
+    #     print('model already in place...')
+    # tf.compat.v1.app.run()
+    im_fn = '/Users/petergeraghty/ocr_experiments/bounding_boxes/dataset/Photo_3101.jpg'
+    im = cv2.imread(im_fn)[:, :, ::-1]
+    im_resized, (ratio_h, ratio_w) = resize_image(im)
 
-
-    if not os.path.exists('bb_model/'):
-        print('downloading model...')
-        BUCKET_NAME = os.getenv('BUCKET_NAME')
-        PATH = os.getenv('PATH_LOC_2')
-        DIR_LOC = os.getenv('DIR_LOC_2')
-
-        downloadDirectoryFroms3(BUCKET_NAME, PATH, DIR_LOC)
-    else:
-        print('model already in place...')
-
-
-    tf.compat.v1.app.run()
+    #print(help(tf.saved_model.load))
+    #print(model_path)

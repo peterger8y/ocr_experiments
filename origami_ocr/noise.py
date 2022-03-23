@@ -13,8 +13,7 @@ from math import floor, ceil
 import random
 
 
-
-def noisy(image, noise_typ='gauss', factor=3):    
+def noisy(image, noise_typ='gauss', factor=3):
     if noise_typ == "gauss":
         row, col, dim = image.shape
         mean = 0
@@ -54,28 +53,30 @@ def noisy(image, noise_typ='gauss', factor=3):
         noisy = image + np.uint8(image * gauss)
         return noisy
 
-def lineup(im): 
-  vert_lines = [random.randint(0, im.shape[1]-1) for x in range(15)]
-  horiz_lines = [100, 120, 80, 60]
-  choices = [0, 1, 2, 3, 4]
-  space = random.choice(horiz_lines)
-  orig = space
-  for x_cord in vert_lines:
-      for extra in range(random.choice(choices)):
-        alt_coord = x_cord - extra
-        if alt_coord<0:
-          pass
-        else:
-          im[:, alt_coord].fill(random.randint(0, 250))
-  while space < im.shape[0]:
-      for extra in range(random.randint(2, 4)):
-        alt_coord = space - extra
-        if alt_coord < 0:
-          pass
-        else:                
-          im[alt_coord, :].fill(random.randint(0, 250))
-      space += orig
-  return im
+
+def lineup(im):
+    vert_lines = [random.randint(0, im.shape[1] - 1) for x in range(15)]
+    horiz_lines = [100, 120, 80, 60]
+    choices = [0, 1, 2, 3, 4]
+    space = random.choice(horiz_lines)
+    orig = space
+    for x_cord in vert_lines:
+        for extra in range(random.choice(choices)):
+            alt_coord = x_cord - extra
+            if alt_coord < 0:
+                pass
+            else:
+                im[:, alt_coord].fill(random.randint(0, 250))
+    while space < im.shape[0]:
+        for extra in range(random.randint(2, 4)):
+            alt_coord = space - extra
+            if alt_coord < 0:
+                pass
+            else:
+                im[alt_coord, :].fill(random.randint(0, 250))
+        space += orig
+    return im
+
 
 class Distort3():
 
@@ -187,7 +188,7 @@ class Distort3():
 
 
 def aug_ED2(imgs, w, h, n_ch, tst=False):
-    d = Distort3(1.0, 10, 10, 5, 15, [w, h], 1, 1)
+    d = Distort3(1.0, 5, 5, 2, 5, [w, h], 1, 1)
 
     for i in range(len(imgs)):
         res = d.perform_operation(Image.fromarray(np.squeeze((imgs[i] * 255).astype(np.uint8))))
@@ -197,36 +198,36 @@ def aug_ED2(imgs, w, h, n_ch, tst=False):
 
 
 def wavy(image_data):
-  image_data = image_data/255
-  image_data = skimage.img_as_float32(image_data)
-  if image_data.ndim < 3:
-      image_data = np.expand_dims(image_data, axis=-1)
+    image_data = image_data / 255
+    image_data = skimage.img_as_float32(image_data)
+    if image_data.ndim < 3:
+        image_data = np.expand_dims(image_data, axis=-1)
 
-  images = image_data[None, ...]
-  sh = images.shape
+    images = image_data[None, ...]
+    sh = images.shape
 
-  image = aug_ED2(images[0][None, ...], sh[2], sh[1], sh[3], tst=False)
-  if image.ndim < 3:
-      image = np.expand_dims(image, axis=-1)
-  return image
+    image = aug_ED2(images[0][None, ...], sh[2], sh[1], sh[3], tst=False)
+    if image.ndim < 3:
+        image = np.expand_dims(image, axis=-1)
+    return image
 
 
-def slant(im, selec = random.choice([-1, 1]), ratio = random.choice([30,40])):
+def slant(im, selec=random.choice([-1, 1]), ratio=random.choice([30, 40])):
     roll_tally = 0
     roll_amnt = 0
     im = np.uint8(im)
     padd = im.shape[1] // ratio
     padd = np.zeros((padd, im.shape[1], im.shape[2]), np.uint8)
     if selec == 1:
-      im = np.concatenate((im, padd), axis=0)
+        im = np.concatenate((im, padd), axis=0)
     else:
-      im = np.concatenate((padd, im), axis=0)
+        im = np.concatenate((padd, im), axis=0)
     #  padd += 255
     np.pad(im, 0, )
     for x in range(im.shape[1]):
-      im[:, x] = np.roll(im[:, x], selec * roll_amnt, axis=0)
-      roll_tally += 1
-      roll_amnt = roll_tally // ratio
+        im[:, x] = np.roll(im[:, x], selec * roll_amnt, axis=0)
+        roll_tally += 1
+        roll_amnt = roll_tally // ratio
     ### new part here!
     roll_tally = 0
     roll_amnt = 0
@@ -249,33 +250,99 @@ def slant(im, selec = random.choice([-1, 1]), ratio = random.choice([30,40])):
 
 
 def slant_dim(img):
-    img1 = slant(img, selec = 1)
-    img1 = slant(img1, selec = -1)
+    img1 = slant(img, selec=1)
+    img1 = slant(img1, selec=-1)
     return img1
 
 
 def margin(im):
-    boundary1 = random.randint(0, 255)  
+    boundary1 = random.randint(0, 255)
     boundary2 = random.randint(boundary1, 256)
     boundary2 = boundary1
     if boundary1 == boundary2:
-      boundary1-=1
+        boundary1 -= 1
     if random.choice([True, False]):
-        border_top = np.uint8(np.random.randint(boundary1, boundary2, (random.randint(25, 250), im.shape[1], im.shape[2])))
+        border_top = np.uint8(
+            np.random.randint(boundary1, boundary2, (random.randint(25, 250), im.shape[1], im.shape[2])))
         im = np.concatenate([border_top, im])
     if random.choice([True, False]):
-        border_side = np.uint8(np.random.randint(boundary1, boundary2, (im.shape[0], random.randint(25, 250), im.shape[2])))
+        border_side = np.uint8(
+            np.random.randint(boundary1, boundary2, (im.shape[0], random.randint(25, 250), im.shape[2])))
         im = np.concatenate([border_side, im], axis=1)
     if random.choice([True, False]):
-        border_side = np.uint8(np.random.randint(boundary1, boundary2, (im.shape[0], random.randint(25, 250), im.shape[2])))
+        border_side = np.uint8(
+            np.random.randint(boundary1, boundary2, (im.shape[0], random.randint(25, 250), im.shape[2])))
         im = np.concatenate([im, border_side], axis=1)
     if random.choice([True, False]):
-        border_top = np.uint8(np.random.randint(boundary1, boundary2, (random.randint(25, 250), im.shape[1], im.shape[2])))
+        border_top = np.uint8(
+            np.random.randint(boundary1, boundary2, (random.randint(25, 250), im.shape[1], im.shape[2])))
         im = np.concatenate([im, border_top])
     im = np.uint8(im)
     return im
-    
 
 
+def lineup(im1):
+    im = im1.copy()
+    line_spacing = im.shape[0] // random.randint(20, 31)
+    vert_line_cap = im.shape[1] // 4
+    vert_line_start = im.shape[1] // 10
+    imprint = np.zeros(im.shape)
+    imprint.fill(255)
+    loc = line_spacing
+    choice = random.randint(vert_line_start, vert_line_cap)
+    to_conc = np.random.randint(240, 255, (im.shape[0], choice), np.uint8)
+    im = np.concatenate([to_conc, im], axis=1)
+    im[:, choice - random.randint(2, 4):choice].fill(random.randint(0, 20))
+    vert_choice = choice
+    while loc < im.shape[0]:
+        width = random.randint(2, 4)
+        im[loc - width:loc, :].fill(0)
+        loc += line_spacing
+    choice = im.shape[0] // random.randint(6, 8)
+    to_conc = np.random.randint(240, 255, (choice, im.shape[1]), np.uint8)
+    im = np.concatenate([to_conc, im], axis=0)
+    im[choice - random.randint(2, 4):choice, :].fill(random.randint(0, 20))
+    if vert_choice != None:
+        im[:, vert_choice - random.randint(2, 4):vert_choice].fill(random.randint(0, 20))
+    image2 = cv2.resize(im, dsize=(800, 1080), interpolation=cv2.INTER_LINEAR)
+    return image2
 
 
+def size_up(im1):
+    im = im1.copy()
+    pref_size_ratio = 800 / 1080
+    cur_ratio = im.shape[0] / im.shape[1]
+    x = pref_size_ratio / cur_ratio
+    amnt_conc = int(x * im.shape[0])
+    arr = np.random.randint(240, 255, (amnt_conc, im.shape[1]), np.uint8)
+    to_return = np.concatenate([im, arr], axis=0)
+    return to_return
+
+    # image2 = cv2.resize(image, dsize=(image.shape[1] // 3, image.shape[0] // 3), interpolation=cv2.INTER_CUBIC)
+
+
+def to_mean(image):
+    choice = False  # random.choice([True, False])
+    avg = image.mean()
+    if not choice:
+        avg = avg - random.randint(45, 200)
+        tick = False
+    for i in range(image.shape[0]):
+        for j in range(image.shape[1]):
+            val = (avg + image[i][j]) // 2 + random.randint(-10, 10)
+            image[i][j] = min(max(val, 0), 255)
+    return image
+
+
+if __name__ == '__main__':
+    dir = '/Users/petergeraghty/ocr_experiments/iam_data/pargs/'
+    for im in os.listdir(dir):
+        if im[-3:] == 'png':
+            im = cv2.imread(dir+im, 0)
+            imr = size_up(im)
+            imr = lineup(imr)
+            imr = to_mean(imr)
+            dst = cv2.GaussianBlur(imr, (5, 5), cv2.BORDER_DEFAULT)
+            imr = np.uint8(wavy(dst))
+            cv2.imshow('image', imr)
+            cv2.waitKey(0)

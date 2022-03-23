@@ -2,7 +2,7 @@ import os
 import cv2
 
 dir = '/Users/petergeraghty/ocr_experiments/crop_cloud_data_gen/'
-new_dir = '/Users/petergeraghty/ocr_experiments/subset_data/'
+new_dir = '/subset_data_2/'
 
 if __name__ == '__main__':
     for i, file in enumerate(os.listdir(dir)):
